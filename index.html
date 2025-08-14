@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Prompt Analyzer Pro - Entrenador IA</title>
+    <style>
+        /* (estilos idénticos a los tuyos, resumidos aquí para no alargar) */
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;
+            background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+            min-height:100vh;color:#333;overflow-x:hidden}
+        .container{max-width:1400px;margin:0 auto;padding:20px;min-height:100vh}
+        .header{text-align:center;margin-bottom:30px;color:white}
+        .title{font-size:3rem;font-weight:800;margin-bottom:10px;text-shadow:2px 2px 4px rgba(0,0,0,0.3)}
+        .subtitle{font-size:1.2rem;opacity:0.9;margin-bottom:20px}
+        .main-interface{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:30px}
+        .input-section,.analysis-section,.suggestions-panel{background:rgba(255,255,255,0.95);border-radius:20px;padding:30px;box-shadow:0 20px 40px rgba(0,0,0,0.1);backdrop-filter:blur(10px)}
+        .section-title{font-size:1.5rem;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:10px}
+        .prompt-input{width:100%;min-height:150px;border:3px solid #e0e7ff;border-radius:12px;padding:20px;font-size:16px;line-height:1.6;resize:vertical;transition:all .3s;font-family:inherit}
+        .prompt-input:focus{outline:none;border-color:#6366f1;box-shadow:0 0 0 4px rgba(99,102,241,.1)}
+        .score-display{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border-radius:15px;padding:25px;text-align:center;margin-bottom:25px;position:relative;overflow:hidden}
+        .score-number{font-size:3rem;font-weight:900;margin-bottom:10px}
+        .score-label{font-size:1.1rem;opacity:.9}
+        .score-indicator{position:absolute;bottom:0;left:0;height:4px;background:rgba(255,255,255,.3);transition:width .5s}
+        .criteria-list{display:grid;gap:15px}
+        .criterion{display:flex;align-items:center;justify-content:space-between;padding:15px;border-radius:10px;transition:all .3s;border-left:4px solid transparent}
+        .criterion.excellent{background:rgba(16,185,129,.08);border-left-color:#10b981}
+        .criterion.good{background:rgba(251,191,36,.08);border-left-color:#fbbf24}
+        .criterion.poor{background:rgba(239,68,68,.06);border-left-color:#ef4444}
+        .criterion-info{flex:1}
+        .criterion-name{font-weight:600;margin-bottom:5px}
+        .criterion-desc{font-size:.9rem;color:#666;line-height:1.4}
+        .criterion-status{display:flex;align-items:center;gap:8px;font-weight:600}
+        .status-icon{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:14px}
+        .status-icon.excellent{background:#10b981}
+        .status-icon.good{background:#fbbf24}
+        .status-icon.poor{background:#ef4444}
+        .quick-examples{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:15px;margin-top:20px}
+        .example-btn{background:white;border:2px solid #e5e7eb;border-radius:10px;padding:15px;cursor:pointer;transition:all .3s;text-align:left}
+        .example-btn:hover{border-color:#6366f1;transform:translateY(-2px);box-shadow:0 8px 16px rgba(99,102,241,.12)}
+        .example-btn-title{font-weight:600;margin-bottom:5px;color:#374151}
+        .example-btn-desc{font-size:.85rem;color:#6b7280}
+        .suggestion-item{background:rgba(99,102,241,.05);border:1px solid rgba(99,102,241,.18);border-radius:10px;padding:20px;margin-bottom:15px}
+        .example-comparison{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:15px}
+        .example-bad,.example-good{padding:15px;border-radius:8px;font-family:'Courier New',monospace;font-size:.9rem}
+        .example-bad{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.1)}
+        .example-good{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.1)}
+        .improvement-tracker{background:linear-gradient(135deg,#f3f4f6,#e5e7eb);border-radius:15px;padding:20px;margin-top:20px}
+        .tracker-title{font-weight:700;margin-bottom:15px;color:#374151}
+        .progress-bars{display:grid;gap:10px}
+        .progress-item{display:flex;justify-content:space-between;align-items:center}
+        .progress-bar{flex:1;height:8px;background:#e5e7eb;border-radius:4px;margin:0 15px;overflow:hidden}
+        .progress-fill{height:100%;background:linear-gradient(90deg,#6366f1,#8b5cf6);transition:width .8s}
+        .floating-particles{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:-1}
+        .particle{position:absolute;width:4px;height:4px;background:rgba(255,255,255,.6);border-radius:50%;animation:float 15s infinite linear}
+        @keyframes float{0%{transform:translateY(100vh) translateX(0) rotate(0);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-10px) translateX(50px) rotate(360deg);opacity:0}}
+        .analysis-loading{display:flex;align-items:center;justify-content:center;padding:40px;color:#6366f1}
+        .loading-dots{display:flex;gap:5px;margin-left:10px}
+        .loading-dots span{width:8px;height:8px;background:#6366f1;border-radius:50%;animation:bounce 1.4s ease-in-out infinite both}
+        .loading-dots span:nth-child(1){animation-delay:-.32s}
+        .loading-dots span:nth-child(2){animation-delay:-.16s}
+        @keyframes bounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+        .real-time-feedback{position:fixed;top:20px;right:20px;background:rgba(255,255,255,.95);border-radius:10px;padding:15px;box-shadow:0 10px 20px rgba(0,0,0,.1);transform:translateX(100%);transition:transform .3s;z-index:1000;max-width:320px}
+        .real-time-feedback.show{transform:translateX(0)}
+        .feedback-title{font-weight:700;margin-bottom:8px;color:#374151}
+        .typing-indicator{background:rgba(99,102,241,.08);border-radius:8px;padding:10px;margin-top:10px;font-size:.9rem;color:#6366f1}
+        @media(max-width:768px){.main-interface{grid-template-columns:1fr}.example-comparison{grid-template-columns:1fr}.title{font-size:2rem}}
+        /* Agregar en tu <style> */
+        .modal-overlay {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0,0,0,0.4);
+        display: flex; align-items: center; justify-content: center;
+        z-index: 2000;
+    }
+    .modal-content {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        max-width: 600px;
+        width: 90%;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        animation: fadeIn 0.3s ease;
+    }
+    .close-btn {
+        background: #6366f1;
+        color: white;
+        padding: 10px 15px;
+        border: none;
+        border-radius: 8px;
+        margin-top: 15px;
+        cursor: pointer;
+    }
+    .keyword-item {
+        margin-bottom: 15px;
+    }
+    .keyword-title {
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+    .keyword-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .keyword-chip {
+        background: #e0e7ff;
+        color: #374151;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+    }
+    @keyframes fadeIn {
+        from {opacity: 0; transform: translateY(-10px);}
+        to {opacity: 1; transform: translateY(0);}
+    }
+
+
+    </style>
+</head>
+<body>
+    <div class="floating-particles" id="particles"></div>
+
+    <div class="container">
+        <div class="header">
+            <h1 class="title">🎯 Analizador de Prompt - Equipo analítica </h1>
+            <p class="subtitle">Equipo entrenado para prompts excelentes para IA</p>
+        </div>
+
+        <div class="main-interface">
+            <div class="input-section">
+                <h2 class="section-title">✍️ Escribe tu Prompt</h2>
+                <textarea class="prompt-input" id="promptInput" placeholder="Escribe aquí tu prompt para desarrollo de código. Ejemplo: 'Crea una función para validar emails'..." oninput="analyzePrompt()"></textarea>
+
+            <div class="quick-examples">
+                <div class="example-btn" onclick="loadExample('bad')">
+                    <div class="example-btn-title">❌ Ejemplo Malo</div>
+                    <div class="example-btn-desc">Ver un prompt deficiente</div>
+                </div>
+                <div class="example-btn" onclick="loadExample('good')">
+                    <div class="example-btn-title">✅ Ejemplo Bueno</div>
+                    <div class="example-btn-desc">Ver un prompt excelente</div>
+                </div>
+                <div class="example-btn" onclick="loadExample('advanced')">
+                    <div class="example-btn-title">🚀 Ejemplo Avanzado</div>
+                    <div class="example-btn-desc">Prompt nivel experto</div>
+                </div>
+                <!-- 🔑 Botón Palabras Clave -->
+                <div class="example-btn" onclick="toggleKeywords()">
+                    <div class="example-btn-title">🔑 Palabras Clave</div>
+                    <div class="example-btn-desc">Ver palabras que mejoran tu prompt</div>
+                </div>
+            </div>
+
+            <!-- Panel Palabras Clave -->
+<!-- Modal Palabras Clave -->
+            <div id="keywordsModal" class="modal-overlay" style="display:none">
+                <div class="modal-content">
+                    <h2 class="section-title">🔑 Palabras Clave por Criterio</h2>
+                    <div id="keywordsList"></div>
+                    <button class="close-btn" onclick="toggleKeywords()">Cerrar</button>
+                </div>
+            </div>
+
+
+            <div class="analysis-section">
+                <h2 class="section-title">🧠 Análisis en Tiempo Real</h2>
+
+                <div class="score-display">
+                    <div class="score-number" id="overallScore">0</div>
+                    <div class="score-label" id="scoreLabel">Escribe un prompt para comenzar</div>
+                    <div class="score-indicator" id="scoreIndicator" style="width:0%"></div>
+                </div>
+
+                <div class="criteria-list" id="criteriaList">
+                    <div class="analysis-loading">
+                        <span>🎯 Esperando tu prompt...</span>
+                        <div class="loading-dots">
+                            <span></span><span></span><span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="improvement-tracker">
+                    <div class="tracker-title">📊 Tu Progreso</div>
+                    <div class="progress-bars">
+                        <div class="progress-item">
+                            <span>Claridad</span>
+                            <div class="progress-bar"><div class="progress-fill" id="clarityProgress" style="width:0%"></div></div>
+                            <span id="clarityScore">0%</span>
+                        </div>
+                        <div class="progress-item">
+                            <span>Especificidad</span>
+                            <div class="progress-bar"><div class="progress-fill" id="specificityProgress" style="width:0%"></div></div>
+                            <span id="specificityScore">0%</span>
+                        </div>
+                        <div class="progress-item">
+                            <span>Contexto</span>
+                            <div class="progress-bar"><div class="progress-fill" id="contextProgress" style="width:0%"></div></div>
+                            <span id="contextScore">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="suggestions-panel" id="suggestionsPanel" style="display:none">
+            <h2 class="section-title">💡 Sugerencias de Mejora</h2>
+            <div id="suggestionsList"></div>
+        </div>
+    </div>
+
+    <div class="real-time-feedback" id="realTimeFeedback">
+        <div class="feedback-title">💬 Feedback Instantáneo</div>
+        <div id="feedbackContent">Comienza a escribir...</div>
+    </div>
+
+    <script>
+        // ---------- Partículas ----------
+        function createParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 30; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.top = Math.random() * 100 + '%';
+                p.style.animationDelay = Math.random() * 15 + 's';
+                p.style.animationDuration = (10 + Math.random() * 10) + 's';
+                container.appendChild(p);
+            }
+        }
+
+        // ---------- Criterios ----------
+        const evaluationCriteria = [
+            { name: 'Claridad del Objetivo', description: 'El prompt especifica claramente qué se quiere lograr', weight: 25, keywords: ['crea','generar','Desarrolla','implementar','construir','diseñar','Visualizaciones'] },
+            { name: 'Especificidad Técnica', description: 'Incluye detalles técnicos como lenguaje, framework, versión', weight: 20, keywords: ['python','javascript','sql','BigQuery','flask','Google',] },
+            { name: 'Contexto y Restricciones', description: 'Define limitaciones, requisitos y contexto de uso', weight: 15, keywords: ['requisitos','debe','no debe','limitaciones','restricciones','seguridad','validaciones','contexto','exportación'] },
+            { name: 'Ejemplos de Input/Output', description: 'Proporciona ejemplos de entrada y salida esperada', weight: 15, keywords: ['ejemplo','input','output','entrada','salida','retorna','devuelve'] },
+            { name: 'Mejores Prácticas', description: 'Solicita seguir estándares y buenas prácticas', weight: 10, keywords: ['buenas prácticas','estándares','clean code','documentar','comentarios','tests','testing'] },
+            { name: 'Manejo de Errores', description: 'Considera casos edge y manejo de errores', weight: 15, keywords: ['errores','excepciones','edge cases','validaciones','manejo','try','catch','errores','validacion'] }
+        ];
+
+        // ---------- Ejemplos ----------
+        const examples = {
+            bad: "Crea una función para validar emails",
+            good: `Necesito una función en Python que valide direcciones de email. Requisitos:
+- Usar regex para validación
+- Retornar True/False
+- Manejar casos edge como emails vacíos o None
+- Incluir docstring con ejemplos
+- Ejemplo de uso: validate_email("test@example.com") -> True`,
+            advanced: `Crea un sistema de autenticación completo para una aplicación web de e-commerce con las siguientes especificaciones técnicas:
+
+Tecnologías requeridas:
+- Backend: Node.js 18+ con Express.js 4.18+ y TypeScript
+- Base de datos: PostgreSQL 15+ con Prisma ORM 5.0+
+- Cache: Redis 7.0+ para sesiones
+- Autenticación: JWT con refresh tokens y 2FA opcional
+- Rate limiting: 5 intentos login/minuto por IP
+- Validación: Joi para schemas de entrada
+
+Funcionalidades core:
+- Registro de usuarios con verificación por email
+- Login con email/password + 2FA opcional (TOTP)
+- Reset de contraseña con token temporal (15 min expiración)
+- Logout y invalidación de tokens
+- Middleware de autorización por roles (user, admin, superadmin)
+
+Endpoints API REST:
+- POST /auth/register
+- POST /auth/login  
+- POST /auth/refresh-token
+- POST /auth/logout
+- POST /auth/forgot-password
+- POST /auth/reset-password
+- GET /auth/verify-email/:token
+- POST /auth/enable-2fa
+- POST /auth/verify-2fa
+
+Requisitos y seguridad:
+- Password: mínimo 8 caracteres, 1 mayúscula, 1 minúscula, 1 número, 1 símbolo especial
+- Email único en base de datos
+- Sanitización de inputs contra XSS e inyección SQL
+- Rate limiting por endpoint
+- Hashing con bcrypt (12 rounds mínimo)
+- JWT tokens: access token (15 min), refresh token (7 días)
+
+Manejo de errores:
+- Códigos HTTP apropiados (400, 401, 403, 409, 422, 429, 500)
+- Logs estructurados con Winston
+- No exponer información sensible en respuestas de error
+- Validar casos edge: emails malformados, tokens expirados, usuarios inexistentes
+
+Ejemplos de request/response y retorna:
+
+POST /auth/register
+Input: {"email": "user@example.com", "password": "SecurePass123!", "name": "John Doe"}
+Output: {"success": true, "message": "Verification email sent", "userId": "uuid-here"}
+
+POST /auth/login  
+Input: {"email": "user@example.com", "password": "SecurePass123!"}
+Output: {"accessToken": "jwt-token", "refreshToken": "refresh-jwt", "user": {"id": "uuid", "email": "user@example.com", "role": "user"}}
+
+Incluir comentarios y documentar:
+- Tests unitarios con Jest (mínimo 90% cobertura)
+- Tests de integración para todos los endpoints
+- Documentación OpenAPI/Swagger completa
+- Docker Compose para desarrollo local
+- Variables de entorno para configuración
+- Middleware de logging y monitoreo
+- Esquemas de base de datos con migraciones
+- Ejemplos de uso con curl y Postman collection.`
+        };
+
+        // ---------- Estado / Debounce ----------
+        let analysisTimeout = null;
+
+        function analyzePrompt() {
+            const prompt = document.getElementById('promptInput').value.trim();
+            clearTimeout(analysisTimeout);
+            if (!prompt) { resetAnalysis(); return; }
+
+            showRealTimeFeedback('Analizando...');
+            analysisTimeout = setTimeout(() => performAnalysis(prompt), 450);
+        }
+
+        // ---------- Evaluación ----------
+        function evaluatePrompt(prompt) {
+            const lower = prompt.toLowerCase();
+            const words = prompt.split(/\s+/).filter(Boolean);
+            const sentences = prompt.split(/[.!?]+/).filter(s => s.trim());
+
+            let totalWeighted = 0;
+            const criteriaResults = [];
+
+            evaluationCriteria.forEach(criterion => {
+                let score = 0;
+                // keyword match ratio
+                const matched = criterion.keywords.filter(k => lower.includes(k.toLowerCase()));
+                const keywordRatio = (matched.length / criterion.keywords.length) * 100;
+
+                // base heuristics per criterion
+                switch(criterion.name) {
+                    case 'Claridad del Objetivo':
+                        if (lower.match(/\b(crea|crear|genera|generar|desarrolla|desarrollar|implementa|implementar|implementar)\b/)) score += 50;
+                        if (words.length >= 8) score += 30;
+                        if (sentences.length >= 2) score += 20;
+                        break;
+                    case 'Especificidad Técnica':
+                        score = keywordRatio;
+                        if (lower.match(/\b(python|javascript|react|node|django|Sql|BigQuery)\b/)) score += 20;
+                        if (lower.match(/\b(api|rest|Google )\b/)) score += 15;
+                        break;
+                    case 'Contexto y Restricciones':
+                        if (lower.includes('requisitos') ||  lower.includes('debe')||  lower.includes('restricciones')) score += 35;
+                        if (lower.includes('no debe') || lower.includes('limitaciones') || lower.includes('max')) score += 25;
+                        if (lower.includes('seguridad') ||  lower.includes('performance') ||  lower.includes('contexto')) score += 30;
+                        if (lower.includes('no debes hacer') ||  lower.includes('evite') ||  lower.includes('agrupa')) score += 30;
+                        if (prompt.includes(':') || prompt.includes('-')) score += 10;
+                        break;
+                    case 'Ejemplos de Input/Output':
+                        if (lower.includes('ejemplo') || lower.includes('input') || lower.includes('output')) score += 40;
+                        if (prompt.includes('->') || lower.includes('retorna') || lower.includes('devuelve')) score += 35;
+                        if (prompt.match(/\(.+\)/)) score += 25;
+                        break;
+                    case 'Mejores Prácticas':
+                        score = keywordRatio;
+                        if (lower.includes('documentar') || lower.includes('comentarios')) score += 40;
+                        if (lower.includes('tests') || lower.includes('testing')) score += 25;
+                        break;
+                    case 'Manejo de Errores':
+                        score = keywordRatio;
+                        if (lower.includes('manejo') || lower.includes('excepciones') || lower.includes('casos límite')) score += 30;
+                        if (lower.includes('validación') || lower.includes('validar') || lower.includes('errores')) score += 25;
+                        break;
+                }
+
+                // cap and normalize
+                score = Math.max(0, Math.min(100, Math.round(score)));
+
+                const status = score >= 80 ? 'excellent' : score >= 50 ? 'good' : 'poor';
+                const feedback = generateFeedback(criterion.name, score);
+
+                criteriaResults.push({
+                    name: criterion.name,
+                    description: criterion.description,
+                    weight: criterion.weight,
+                    score,
+                    status,
+                    feedback,
+                    matchedKeywords: matched
+                });
+
+                totalWeighted += (score * (criterion.weight / 100));
+            });
+
+            const overallScore = Math.min(100, Math.round(totalWeighted));
+
+            return {
+                overallScore,
+                criteriaResults,
+                suggestions: generateSuggestions(criteriaResults, prompt)
+            };
+        }
+
+        function generateFeedback(criterionName, score) {
+            const feedbacks = {
+                'Claridad del Objetivo': {
+                    excellent: '🎯 Objetivo muy claro y específico.',
+                    good: '👍 Objetivo definido, podría ser más específico.',
+                    poor: '❌ Objetivo poco claro. Especifica qué quieres lograr exactamente.'
+                },
+                'Especificidad Técnica': {
+                    excellent: '💻 Detalles técnicos claros (lenguaje, framework, versiones).',
+                    good: '⚙️ Incluye algunos detalles técnicos; añade versiones o librerías si es posible.',
+                    poor: '❌ Falta especificidad técnica (lenguaje, framework, etc.).'
+                },
+                'Contexto y Restricciones': {
+                    excellent: '📋 Contexto y restricciones muy bien definidos.',
+                    good: '📝 Incluye algo de contexto; añade límites o restricciones concretas.',
+                    poor: '❌ Falta contexto y restricciones importantes.'
+                },
+                'Ejemplos de Input/Output': {
+                    excellent: '💡 Excelentes ejemplos de entrada y salida.',
+                    good: '👌 Incluye algunos ejemplos; añade casos edge para clarificar.',
+                    poor: '❌ No proporciona ejemplos de uso.'
+                },
+                'Mejores Prácticas': {
+                    excellent: '⭐ Solicita seguir buenas prácticas y tests.',
+                    good: '👍 Menciona algunas buenas prácticas; podrías pedir cobertura o linters.',
+                    poor: '❌ No menciona estándares o buenas prácticas.'
+                },
+                'Manejo de Errores': {
+                    excellent: '🛡️ Considera muy bien el manejo de errores.',
+                    good: '✅ Incluye algo de manejo de errores; añade casos específicos.',
+                    poor: '❌ No considera casos edge ni manejo de errores.'
+                }
+            };
+            const status = score >= 80 ? 'excellent' : score >= 50 ? 'good' : 'poor';
+            return feedbacks[criterionName][status];
+        }
+
+        // ---------- Sugerencias ----------
+        function generateSuggestions(criteriaResults, prompt) {
+            const suggestions = [];
+            criteriaResults.forEach(c => {
+                if (c.score < 70) {
+                    let exampleBad = 'Ejemplo insuficiente';
+                    let exampleGood = 'Ejemplo mejorado';
+                    let desc = '';
+
+                    switch(c.name) {
+                        case 'Claridad del Objetivo':
+                            desc = 'Sé más específico sobre el objetivo: ¿qué debe hacer exactamente la IA? Incluye verbo de acción y output esperado.';
+                            exampleBad = 'Ayúdame con una función';
+                            exampleGood = 'Crea una función en Python que valide números de teléfono móviles españoles y retorne True/False.';
+                            break;
+                        case 'Especificidad Técnica':
+                            desc = 'Indica lenguaje, framework, versiones y librerías preferidas.';
+                            exampleBad = 'Crea una API';
+                            exampleGood = 'Crea una API REST con FastAPI 0.104+, SQLAlchemy y PostgreSQL.';
+                            break;
+                        case 'Contexto y Restricciones':
+                            desc = 'Agrega contexto del proyecto, límites de recursos y restricciones de formato o tamaño.';
+                            exampleBad = 'Procesar datos';
+                            exampleGood = 'Procesa CSVs de hasta 100MB, valida columnas obligatorias y reporta errores.';
+                            break;
+                        case 'Ejemplos de Input/Output':
+                            desc = 'Incluye ejemplos concretos de entrada y salida (casos felices y edge cases).';
+                            exampleBad = 'Función que calcule';
+                            exampleGood = 'Input: "user@example.com" -> Output: True; Input: "" -> Output: False.';
+                            break;
+                        case 'Mejores Prácticas':
+                            desc = 'Pide tests, documentación, y estilo de código (linters o convenciones).';
+                            exampleBad = 'Escribe código limpio';
+                            exampleGood = 'Incluye docstrings, tests unitarios y cumple PEP8.';
+                            break;
+                        case 'Manejo de Errores':
+                            desc = 'Especifica cómo tratar entradas inválidas y errores esperados.';
+                            exampleBad = 'Maneja errores';
+                            exampleGood = 'Devuelve mensajes de error claros y maneja None, cadenas vacías y excepciones de I/O.';
+                            break;
+                    }
+
+                    suggestions.push({
+                        title: `Mejorar ${c.name}`,
+                        description: desc,
+                        example: { bad: exampleBad, good: exampleGood }
+                    });
+                }
+            });
+            return suggestions;
+        }
+
+        // ---------- UI: actualizar ----------
+        function updateUI(results, prompt) {
+            // Overall score
+            const overallEl = document.getElementById('overallScore');
+            const labelEl = document.getElementById('scoreLabel');
+            const indicator = document.getElementById('scoreIndicator');
+
+            overallEl.textContent = results.overallScore;
+            labelEl.textContent = results.overallScore >= 75 ? 'Excelente prompt' :
+                                  results.overallScore >= 50 ? 'Buen prompt, puede mejorar' :
+                                  'Prompt débil — necesita más detalle';
+            indicator.style.width = results.overallScore + '%';
+
+            // Criteria list
+            const list = document.getElementById('criteriaList');
+            list.innerHTML = '';
+            results.criteriaResults.forEach(c => {
+                const item = document.createElement('div');
+                item.className = `criterion ${c.status}`;
+                item.innerHTML = `
+                    <div class="criterion-info">
+                        <div class="criterion-name">${c.name} — ${c.score}%</div>
+                        <div class="criterion-desc">${c.description}</div>
+                        <div style="font-size:.85rem;color:#555;margin-top:6px">${c.feedback}</div>
+                    </div>
+                    <div class="criterion-status">
+                        <div class="status-icon ${c.status}">${c.status === 'excellent' ? '✓' : c.status === 'good' ? '●' : '!'}</div>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+
+            // Progress bars: use three representative criteria
+            const clarity = results.criteriaResults.find(x => x.name === 'Claridad del Objetivo')?.score || 0;
+            const spec = results.criteriaResults.find(x => x.name === 'Especificidad Técnica')?.score || 0;
+            const context = results.criteriaResults.find(x => x.name === 'Contexto y Restricciones')?.score || 0;
+
+            document.getElementById('clarityProgress').style.width = clarity + '%';
+            document.getElementById('clarityScore').textContent = clarity + '%';
+            document.getElementById('specificityProgress').style.width = spec + '%';
+            document.getElementById('specificityScore').textContent = spec + '%';
+            document.getElementById('contextProgress').style.width = context + '%';
+            document.getElementById('contextScore').textContent = context + '%';
+
+            // Suggestions panel
+            const suggestionsPanel = document.getElementById('suggestionsPanel');
+            const suggestionsList = document.getElementById('suggestionsList');
+            if (results.suggestions.length > 0) {
+                suggestionsPanel.style.display = 'block';
+                suggestionsList.innerHTML = '';
+                results.suggestions.forEach(s => {
+                    const sItem = document.createElement('div');
+                    sItem.className = 'suggestion-item';
+                    sItem.innerHTML = `
+                        <div class="suggestion-title">${s.title}</div>
+                        <div style="margin-bottom:10px">${s.description}</div>
+                        <div class="example-comparison">
+                            <div class="example-bad"><div class="example-label">Malo</div><pre>${s.example.bad}</pre></div>
+                            <div class="example-good"><div class="example-label">Mejor</div><pre>${s.example.good}</pre></div>
+                        </div>
+                    `;
+                    suggestionsList.appendChild(sItem);
+                });
+            } else {
+                suggestionsPanel.style.display = 'none';
+                suggestionsList.innerHTML = '';
+            }
+
+            // Feedback box (small)
+            showRealTimeFeedback(`${results.overallScore}% — ${labelEl.textContent}`);
+        }
+        /* Agregar en tu <script> */
+
+// Mostrar/Ocultar panel de palabras clave
+        function toggleKeywords() {
+            const modal = document.getElementById('keywordsModal');
+            if (modal.style.display === 'none') {
+                generateKeywordsList();
+                modal.style.display = 'flex';
+            } else {
+                modal.style.display = 'none';
+            }
+        }
+
+        function generateKeywordsList() {
+            const container = document.getElementById('keywordsList');
+            container.innerHTML = '';
+            evaluationCriteria.forEach(c => {
+                const div = document.createElement('div');
+                div.className = 'keyword-item';
+                div.innerHTML = `
+                    <div class="keyword-title">${c.name}</div>
+                    <div class="keyword-list">
+                        ${c.keywords.map(k => `<span class="keyword-chip">${k}</span>`).join('')}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+
+
+        // ---------- UI helpers ----------
+        function resetAnalysis() {
+            document.getElementById('overallScore').textContent = '0';
+            document.getElementById('scoreLabel').textContent = 'Escribe un prompt para comenzar';
+            document.getElementById('scoreIndicator').style.width = '0%';
+            document.getElementById('criteriaList').innerHTML = `
+                <div class="analysis-loading">
+                    <span>🎯 Esperando tu prompt...</span>
+                    <div class="loading-dots"><span></span><span></span><span></span></div>
+                </div>
+            `;
+            document.getElementById('clarityProgress').style.width = '0%';
+            document.getElementById('specificityProgress').style.width = '0%';
+            document.getElementById('contextProgress').style.width = '0%';
+            document.getElementById('clarityScore').textContent = '0%';
+            document.getElementById('specificityScore').textContent = '0%';
+            document.getElementById('contextScore').textContent = '0%';
+            document.getElementById('suggestionsPanel').style.display = 'none';
+            showRealTimeFeedback('Comienza a escribir...');
+        }
+
+        function showRealTimeFeedback(text = '') {
+            const box = document.getElementById('realTimeFeedback');
+            const content = document.getElementById('feedbackContent');
+            content.textContent = text || 'Analizando...';
+            box.classList.add('show');
+            // auto hide after 3s
+            clearTimeout(box._hideTimer);
+            box._hideTimer = setTimeout(() => box.classList.remove('show'), 3200);
+        }
+
+        // ---------- Cargar ejemplos ----------
+        function loadExample(key) {
+            const promptEl = document.getElementById('promptInput');
+            promptEl.value = examples[key] || '';
+            analyzePrompt();
+        }
+
+        // ---------- Ejecutar análisis ----------
+        function performAnalysis(prompt) {
+            const results = evaluatePrompt(prompt);
+            updateUI(results, prompt);
+        }
+
+        // ---------- Inicialización ----------
+        window.addEventListener('DOMContentLoaded', () => {
+            createParticles();
+            resetAnalysis();
+            // optional: load an initial example
+            // document.getElementById('promptInput').value = examples.good;
+            // analyzePrompt();
+        });
+
+        // Exponer funciones para pruebas rápidas (opcional)
+        window._analyzePrompt = analyzePrompt;
+        window._loadExample = loadExample;
+    </script>
+</body>
+</html>
